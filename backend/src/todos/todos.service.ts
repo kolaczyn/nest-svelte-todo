@@ -1,79 +1,57 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as generateGuid } from 'uuid';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { Todo } from './entities/todo.entity';
 
-const exampleTodos: Todo[] = [
-  { done: false, guid: generateGuid(), title: 'Learn Nest' },
-  { done: true, guid: generateGuid(), title: 'Learn React' },
-  { done: false, guid: generateGuid(), title: 'Learn Svelte' },
-];
-
 @Injectable()
 export class TodosService {
-  private todos: Todo[] = exampleTodos;
   constructor(
     @InjectRepository(Todo)
     private todosRepository: Repository<Todo>,
   ) {}
-  create(createTodoDto: CreateTodoDto) {
-    const guid = generateGuid();
-    const newTodo: Todo = {
-      guid,
+
+  async create(createTodoDto: CreateTodoDto) {
+    const todo = this.todosRepository.create({
       done: false,
       title: createTodoDto.title,
-    };
-    this.todos.push(newTodo);
-    return newTodo;
+    });
+
+    await this.todosRepository.save(todo);
+    return todo;
   }
 
   findAll() {
     return this.todosRepository.find();
-    return this.todos;
   }
 
-  findOne(guid: string) {
-    const todo = this.getTodo(guid);
+  async findOne(guid: string) {
+    return await this.getSingleTodo(guid);
+  }
 
-    if (!todo) {
-      throw new NotFoundException();
-    }
+  async update(guid: string, updateTodoDto: UpdateTodoDto) {
+    const todo = await this.getSingleTodo(guid);
+
+    todo.title = updateTodoDto.title;
+    todo.done = updateTodoDto.done;
+    await this.todosRepository.save(todo);
 
     return todo;
   }
 
-  update(guid: string, updateTodoDto: UpdateTodoDto) {
-    const todo = this.getTodo(guid);
-
-    if (!todo) {
-      throw new NotFoundException();
-    }
-    const newTodo: Todo = {
-      ...todo,
-      ...updateTodoDto,
-    };
-
-    this.todos = [...this.todos.filter((t) => t.guid !== guid), newTodo];
-
-    return newTodo;
-  }
-
-  remove(guid: string) {
-    const todo = this.getTodo(guid);
-
-    if (!todo) {
-      throw new NotFoundException();
-    }
-
-    this.todos = this.todos.filter((t) => t.guid !== guid);
+  async remove(guid: string) {
+    const todo = await this.getSingleTodo(guid);
+    await this.todosRepository.delete({ guid });
 
     return todo;
   }
 
-  private getTodo(guid: string) {
-    return this.todos.find((t) => t.guid === guid);
+  private async getSingleTodo(guid: string) {
+    const todo = await this.todosRepository.findOneBy({ guid });
+    if (!todo) {
+      throw new NotFoundException();
+    }
+    return todo;
   }
 }
