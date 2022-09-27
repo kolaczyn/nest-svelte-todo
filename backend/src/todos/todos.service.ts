@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { v4 as generateGuid } from 'uuid';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
@@ -13,6 +15,10 @@ const exampleTodos: Todo[] = [
 @Injectable()
 export class TodosService {
   private todos: Todo[] = exampleTodos;
+  constructor(
+    @InjectRepository(Todo)
+    private todosRepository: Repository<Todo>,
+  ) {}
   create(createTodoDto: CreateTodoDto) {
     const guid = generateGuid();
     const newTodo: Todo = {
@@ -25,6 +31,7 @@ export class TodosService {
   }
 
   findAll() {
+    return this.todosRepository.find();
     return this.todos;
   }
 
